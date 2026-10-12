@@ -12,7 +12,7 @@ import type { ResumeData } from "@/lib/resume";
  */
 
 const BASE_URL = (
-  process.env.NEXT_PUBLIC_API_BASE_URL ?? "https://matchcv-ai-be.onrender.com/api"
+  process.env.NEXT_PUBLIC_API_BASE_URL ?? "https://matchcv-ai-be.onrender.com"
 ).replace(/\/+$/, "");
 
 /* ------------------------------------------------------------------ types */
