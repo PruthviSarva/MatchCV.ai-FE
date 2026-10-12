@@ -12,8 +12,29 @@ import type { ResumeData } from "@/lib/resume";
  */
 
 const BASE_URL = (
-  process.env.NEXT_PUBLIC_API_BASE_URL ?? "https://matchcv-ai-be.onrender.com"
+  process.env.NEXT_PUBLIC_API_BASE_URL ?? "https://matchcv-ai-be-1.onrender.com"
 ).replace(/\/+$/, "");
+
+/**
+ * Every request is bounded.
+ *
+ * fetch() has no timeout of its own: if the API accepts the connection and
+ * then never answers -- a scale-to-zero host still booting, a crash-looping
+ * container, a proxy holding the socket open -- an unbounded fetch never
+ * settles and the caller's spinner spins until the tab is closed. A request
+ * that cannot finish has to surface as an error a person can read.
+ *
+ * The default is generous because a host that sleeps when idle can take most
+ * of a minute to answer its first request.
+ */
+const DEFAULT_TIMEOUT_MS = 60_000;
+
+/**
+ * Tailoring is the one call that is legitimately slow: the model thinks, then
+ * writes a whole resume. The backend allows the Claude call five minutes, so
+ * giving up sooner here would abandon work the server is still doing.
+ */
+const TAILOR_TIMEOUT_MS = 300_000;
 
 /* ------------------------------------------------------------------ types */
 
@@ -255,10 +276,19 @@ interface RequestOptions {
   auth?: boolean;
   /** Internal: stops a refresh loop if the refresh call itself 401s. */
   retrying?: boolean;
+  /** Overridden only by calls that are meant to take minutes. */
+  timeoutMs?: number;
 }
 
 async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const { method = "GET", body, formData, auth = true, retrying = false } = options;
+  const {
+    method = "GET",
+    body,
+    formData,
+    auth = true,
+    retrying = false,
+    timeoutMs = DEFAULT_TIMEOUT_MS,
+  } = options;
 
   const headers: Record<string, string> = {};
   if (body !== undefined) {
@@ -277,11 +307,20 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
       method,
       headers,
       body: formData ?? (body === undefined ? undefined : JSON.stringify(body)),
+      signal: AbortSignal.timeout(timeoutMs),
     });
-  } catch {
+  } catch (caught) {
+    // Worth telling apart: "could not reach" means nothing answered, while a
+    // timeout means the host took the connection and then went quiet. The
+    // second one points at the deployment rather than at the network.
+    const timedOut = caught instanceof DOMException && caught.name === "TimeoutError";
     throw new ApiError(
       0,
-      `Could not reach the API at ${BASE_URL}. Is the backend running?`,
+      timedOut
+        ? `The API at ${BASE_URL} accepted the request but sent no response `
+          + `within ${Math.round(timeoutMs / 1000)}s. The backend is most `
+          + `likely not running.`
+        : `Could not reach the API at ${BASE_URL}. Is the backend running?`,
     );
   }
 
@@ -397,7 +436,11 @@ export const api = {
     request<void>(`/api/resumes/${id}`, { method: "DELETE" }),
 
   tailor: (input: { baseResumeId?: number; resumeText?: string; jobDescription: string }) =>
-    request<TailoredResumeDetail>("/api/tailorings", { method: "POST", body: input }),
+    request<TailoredResumeDetail>("/api/tailorings", {
+      method: "POST",
+      body: input,
+      timeoutMs: TAILOR_TIMEOUT_MS,
+    }),
 
   listTailorings: () => request<TailoredResumeSummary[]>("/api/tailorings"),
 
@@ -418,7 +461,11 @@ export const api = {
     const token = tokens.access();
     const response = await fetch(
       `${BASE_URL}/api/tailorings/${id}/download?format=${format}`,
-      { headers: token ? { Authorization: `Bearer ${token}` } : {} },
+      {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        // This path does not go through request(), so it needs its own bound.
+        signal: AbortSignal.timeout(DEFAULT_TIMEOUT_MS),
+      },
     );
     if (!response.ok) {
       throw await toError(response);
