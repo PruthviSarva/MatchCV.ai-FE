@@ -1,55 +1,453 @@
 @import "tailwindcss";
 
+/* ===========================================================================
+   MatchCV.ai design tokens
+   ---------------------------------------------------------------------------
+   Every colour in the app comes from one of the variables below. Nothing
+   outside this file names a raw hex or a Tailwind palette shade, which is the
+   only reason a theme switch is a dozen lines rather than a sweep through
+   every component.
+
+   Dark is the default and is defined on bare :root, so a page renders
+   correctly before any JavaScript runs. Light is an override, applied by the
+   data-theme attribute that the inline script in layout.tsx stamps on <html>
+   before first paint.
+
+   The brand green is taken from the check mark on the MatchCV.ai logo, so the
+   product and the mark agree.
+   ========================================================================= */
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-  --font-geist-sans: Arial, Helvetica, sans-serif;
-  --font-geist-mono: "Courier New", Courier, monospace;
+  color-scheme: dark;
+
+  /* Canvas and raised surfaces. The steps are small on purpose: large jumps
+     between layers read as grey boxes stacked on black rather than as depth. */
+  --canvas: #05070b;
+  --canvas-raised: #080b11;
+  --surface: #0d1118;
+  --surface-2: #121823;
+  --surface-3: #18202d;
+
+  /* Hairlines, as alpha over whatever is beneath them, so a border never looks
+     painted on when it crosses a gradient. */
+  --line: rgb(255 255 255 / 0.08);
+  --line-strong: rgb(255 255 255 / 0.15);
+
+  --ink: #e9eef7;
+  --ink-muted: #9fadc0;
+  --ink-faint: #68788d;
+
+  --brand: #2fe3a6;
+  --brand-strong: #13c389;
+  --brand-soft: rgb(47 227 166 / 0.12);
+  --brand-line: rgb(47 227 166 / 0.3);
+  --on-brand: #04140e;
+
+  --violet: #8b7cff;
+  --cyan: #4cc9f0;
+
+  --danger: #ff6b6b;
+  --danger-soft: rgb(255 107 107 / 0.12);
+  --warn: #ffc14d;
+  --warn-soft: rgb(255 193 77 / 0.12);
+  --info: #6aa9ff;
+  --info-soft: rgb(106 169 255 / 0.12);
+
+  /* Shadows carry a brand tint rather than being neutral black, which is what
+     stops the dark theme looking like a greyscale screenshot. */
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.4);
+  --shadow-md: 0 8px 24px -8px rgb(0 0 0 / 0.6);
+  --shadow-lg: 0 24px 60px -20px rgb(0 0 0 / 0.75);
+  --shadow-brand: 0 12px 40px -12px rgb(47 227 166 / 0.4);
+
+  /* The paper a resume preview is drawn on. Fixed to real paper in both
+     themes: the preview is a proof of the file that gets downloaded, and a
+     resume on a dark page would be a lie about what the employer receives. */
+  --paper: #ffffff;
+  --paper-ink: #16181d;
+  --paper-ink-muted: #4a5160;
+  --paper-line: #c9ced8;
 }
 
+:root[data-theme="light"] {
+  color-scheme: light;
+
+  --canvas: #f6f8fb;
+  --canvas-raised: #ffffff;
+  --surface: #ffffff;
+  --surface-2: #f2f5f9;
+  --surface-3: #e8edf4;
+
+  --line: rgb(12 22 36 / 0.1);
+  --line-strong: rgb(12 22 36 / 0.18);
+
+  --ink: #0b1220;
+  --ink-muted: #51607a;
+  --ink-faint: #7c8ca5;
+
+  /* Darker than the dark-theme green: the bright mint clears 4.5:1 against
+     near-black but not against white. */
+  --brand: #0a9d72;
+  --brand-strong: #07805d;
+  --brand-soft: rgb(10 157 114 / 0.1);
+  --brand-line: rgb(10 157 114 / 0.28);
+  --on-brand: #ffffff;
+
+  --violet: #6d5ae0;
+  --cyan: #0e8fbc;
+
+  --danger: #d63b3b;
+  --danger-soft: rgb(214 59 59 / 0.09);
+  --warn: #a96a00;
+  --warn-soft: rgb(169 106 0 / 0.1);
+  --info: #2a6fd4;
+  --info-soft: rgb(42 111 212 / 0.1);
+
+  --shadow-sm: 0 1px 2px rgb(12 22 36 / 0.06);
+  --shadow-md: 0 8px 24px -10px rgb(12 22 36 / 0.16);
+  --shadow-lg: 0 24px 60px -24px rgb(12 22 36 / 0.22);
+  --shadow-brand: 0 12px 40px -16px rgb(10 157 114 / 0.35);
+}
+
+/* Expose the tokens to Tailwind so utilities such as bg-surface, text-ink and
+   border-line exist and stay in sync with the theme. */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-canvas: var(--canvas);
+  --color-canvas-raised: var(--canvas-raised);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+  --color-ink-faint: var(--ink-faint);
+
+  --color-brand: var(--brand);
+  --color-brand-strong: var(--brand-strong);
+  --color-brand-soft: var(--brand-soft);
+  --color-brand-line: var(--brand-line);
+  --color-on-brand: var(--on-brand);
+
+  --color-violet: var(--violet);
+  --color-cyan: var(--cyan);
+
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-warn: var(--warn);
+  --color-warn-soft: var(--warn-soft);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+
+  --color-paper: var(--paper);
+  --color-paper-ink: var(--paper-ink);
+  --color-paper-ink-muted: var(--paper-ink-muted);
+  --color-paper-line: var(--paper-line);
+
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system,
+    "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: var(--font-mono-face), ui-monospace, "SFMono-Regular", Menlo,
+    Consolas, monospace;
+
+  --shadow-elevated: var(--shadow-md);
+  --shadow-floating: var(--shadow-lg);
+  --shadow-glow: var(--shadow-brand);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* ------------------------------------------------------------------- base */
+
+* {
+  border-color: var(--line);
+}
+
+html {
+  -webkit-tap-highlight-color: transparent;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--canvas);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  /* Dark text on a dark ground is what antialiasing was tuned against; without
+     this, light type on near-black renders noticeably heavier than intended. */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
+::selection {
+  background: var(--brand);
+  color: var(--on-brand);
+}
+
+/* One focus treatment everywhere. Keyboard users get a visible ring; a mouse
+   click does not leave one behind. */
+:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Scrollbars, so a dark page does not get a bright native gutter. */
+* {
+  scrollbar-color: var(--line-strong) transparent;
+  scrollbar-width: thin;
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: var(--line-strong);
+  border: 3px solid transparent;
+  background-clip: content-box;
+  border-radius: 999px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--ink-faint);
+  background-clip: content-box;
+}
+
+/* ---------------------------------------------------------------- aurora */
+
+/*
+ * The glow behind the hero and the auth panels.
+ *
+ * Three blurred radial blobs on a fixed layer rather than an image: it scales
+ * to any viewport, costs no bytes, and recolours itself with the theme. It is
+ * pointer-events:none and aria-hidden at the markup level, so it never
+ * intercepts a click or reaches a screen reader.
+ */
+.aurora {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.aurora::before,
+.aurora::after {
+  content: "";
+  position: absolute;
+  width: 46rem;
+  height: 46rem;
+  border-radius: 50%;
+  filter: blur(96px);
+  opacity: 0.5;
+  will-change: transform;
+}
+
+.aurora::before {
+  top: -22rem;
+  left: -10rem;
+  background: radial-gradient(circle, var(--brand) 0%, transparent 65%);
+  animation: aurora-drift-a 26s ease-in-out infinite alternate;
+}
+
+.aurora::after {
+  top: -18rem;
+  right: -14rem;
+  background: radial-gradient(circle, var(--violet) 0%, transparent 65%);
+  animation: aurora-drift-b 32s ease-in-out infinite alternate;
+}
+
+:root[data-theme="light"] .aurora::before,
+:root[data-theme="light"] .aurora::after {
+  opacity: 0.22;
+}
+
+@keyframes aurora-drift-a {
+  from {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  to {
+    transform: translate3d(8rem, 4rem, 0) scale(1.15);
+  }
+}
+
+@keyframes aurora-drift-b {
+  from {
+    transform: translate3d(0, 0, 0) scale(1.1);
+  }
+  to {
+    transform: translate3d(-7rem, 5rem, 0) scale(0.95);
+  }
+}
+
+/* A faint grid, to give the near-black canvas a sense of surface. */
+.grid-veil {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background-image: linear-gradient(var(--line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--line) 1px, transparent 1px);
+  background-size: 64px 64px;
+  /* Faded at the edges so the grid never collides with a page boundary. */
+  mask-image: radial-gradient(ellipse 80% 55% at 50% 0%, #000 20%, transparent 75%);
+}
+
+/* --------------------------------------------------------------- effects */
+
+/* A hairline that is brighter at the top than the bottom, which is what makes
+   a flat card read as a raised panel rather than a rectangle. */
+.edge-light {
+  position: relative;
+}
+
+.edge-light::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(
+    to bottom,
+    rgb(255 255 255 / 0.14),
+    rgb(255 255 255 / 0.02) 40%,
+    transparent
+  );
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+:root[data-theme="light"] .edge-light::before {
+  background: linear-gradient(
+    to bottom,
+    rgb(12 22 36 / 0.1),
+    rgb(12 22 36 / 0.02) 40%,
+    transparent
+  );
+}
+
+.text-gradient {
+  background: linear-gradient(120deg, var(--ink) 20%, var(--brand) 55%, var(--cyan) 95%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* The sweep across a skeleton while data loads. */
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--surface-2) 25%,
+    var(--surface-3) 50%,
+    var(--surface-2) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.6s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
+/* The ring that pulses out of the "tailoring in progress" indicator. */
+@keyframes pulse-ring {
+  0% {
+    transform: scale(0.9);
+    opacity: 0.7;
+  }
+  70% {
+    transform: scale(1.7);
+    opacity: 0;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.pulse-ring::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  border: 2px solid var(--brand);
+  animation: pulse-ring 1.8s cubic-bezier(0.2, 0.8, 0.3, 1) infinite;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.rise {
+  animation: rise 0.5s cubic-bezier(0.2, 0.7, 0.3, 1) both;
+}
+
+/* Everything above is decoration. Someone who has asked their system to stop
+   moving things should get a static page, not a slower one. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ----------------------------------------------------------------- print */
+
+/*
+ * Printing is a first-class output here: it is how a user gets a paper copy of
+ * the preview without going through the server renderer. Everything that is
+ * not the resume is removed rather than hidden off-screen, so the page breaks
+ * fall where the resume's own content says they should.
+ */
 @media print {
   @page {
     margin: 0.5in;
     size: A4;
   }
 
-  body {
-    background: #ffffff;
+  :root,
+  :root[data-theme="light"] {
+    --paper: #ffffff;
+    --paper-ink: #000000;
+    --paper-ink-muted: #333333;
+    --paper-line: #999999;
   }
 
-  .no-print {
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+
+  .no-print,
+  .aurora,
+  .grid-veil {
     display: none !important;
   }
 
-  .resume-print-area,
-  .resume-print-area * {
-    visibility: visible;
-  }
-
   .resume-print-area {
-    left: 0;
     position: absolute;
     top: 0;
+    left: 0;
     width: 100%;
   }
 
@@ -58,5 +456,6 @@ body {
     box-shadow: none;
     max-width: none;
     padding: 0;
+    border-radius: 0;
   }
 }
